@@ -39,46 +39,32 @@ ENFORCING="$SRCTREE/kernel_zip/aroma/kernel/enforce"
 ANYKERNEL="$SRCTREE/kernel_zip/anykernel"
 
 # Telegram (Please Configure it or Type on End: No."
-CHAT_ID=""
-BOT_TOKEN=""
+CHAT_ID="${KERNEL_CHAT_ID:-default_value}"
+BOT_TOKEN="${KERNEL_BOT_TOKEN:-default_value}"
 TELEGRAM_API="https://api.telegram.org/bot${BOT_TOKEN}"
+UPLOAD_FLAG=0 # 0 if no upload, 1 if yes
 
 # Initialize
 init() {
 	if [ -z "$CHAT_ID" ] || [ -z "$BOT_TOKEN" ]; then
-		clear
-		echo -e "${YELLOW}Warning: Your BOT Token or Chat ID is Empty!${NC}\n"
-		sleep 2
+		echo -e "${YELLOW}Your bot token or chat ID is empty, kernel upload will be skipped.${NC}\n"
+		sleep 0.1
+	else
+		UPLOAD_FLAG=1
 	fi
 	if [ -d $SRCTREE/kernel_zip/aroma/kernel/enforce ] || [ -d $SRCTREE/kernel_zip/aroma/kernel/permissive ]; then
-		sleep 1
+		sleep 0.1
 	else
 		mkdir $SRCTREE/kernel_zip/aroma/kernel/enforce
 		mkdir $SRCTREE/kernel_zip/aroma/kernel/permissive
-		sleep 1
+		sleep 0.1
 	fi
 	git restore $SRCTREE/kernel_zip/aroma/META-INF/com/google/android/aroma-config
-	clear
+	
 	find "$ANYKERNEL" -type f -name "*.zip" -exec rm {} +
-	echo -e "${YELLOW}Do you want to make a Clean Build? [yes|no]${NC}\n"
-	echo -e "${GREEN}Hint: Type Yes or No in this Field below.${NC}\n"
-	printf "${USER}:~${SRCTREE}$ "
-	read -r ans
-	ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
-	while [ "$ans" != "YES" ] && [ "$ans" != "NO" ]; do
-		printf "Please answer 'yes' or 'no':'\\n"
-		printf "${USER}:~${SRCTREE}$ "
-		read -r ans
-		ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
-	done
-	if [ "$ans" = "YES" ]; then
-		clear
-		echo -e "${YELLOW}Cleaning up ...${NC}\n"
-		rm -rf out out2 && make clean && make mrproper
-		toolchain
-	elif [ "$ans" = "NO" ]; then
-		toolchain
-	fi
+	echo -e "${YELLOW}Cleaning up...${NC}\n"
+	rm -rf out out2 && make clean && make mrproper
+	toolchain
 }
 
 glibc_patch() {
@@ -117,20 +103,20 @@ glibc_patch() {
 	echo -e "${GREEN}Done${NC}\n"
 }
 
-# Let's do a Toolchain check
+# Checking toolchain
 toolchain() {
-	clear
+	
 	if [ -d "$TOOLCHAIN" ]; then
-		clear
+		
 		echo -e "${GREEN}Toolchain found. Skip!${NC}\n"
-		sleep 2
-		clear
+		sleep 0.1
+		
 		select_device
 	else
 		echo -e "${RED}No Toolchain found!${NC}\n"
 		echo -e "${YELLOW}Warning: Toolchains need different Operating Systems!${NC}\n"
-		echo -e "${RED}Warning for Neutron Toolchain! Before type 'yes', make sure that u have 'libarchive-tools' installed else it will fail to patch your GLIBC!${NC}\n"
-		echo -e "${YELLOW}Check below if your System are compatible before u Continue.${NC}\n"
+		echo -e "${RED}Warning for Neutron Toolchain! Before typing 'yes', make sure that you have 'libarchive-tools' installed, GLIBC cannot be patched!${NC}\n"
+		echo -e "${YELLOW}Check below for system compatibility before continuing.${NC}\n"
 		echo -e "${GREEN}Your current OS is: $DISTRO - GLIBC: $GLIBC_VERSION${NC}\n"
 		if [[ "$DISTRO" == "Ubuntu 24.04 LTS" || "$DISTRO" == "Ubuntu 23.10" || "$DISTRO" == "Ubuntu 22.04.5 LTS" ]]; then
 			echo -e "${YELLOW}➜ Neutron needs ${GREEN}Ubuntu 24.04 LTS | Ubuntu 23.10 | Ubuntu 22.04.5 LTS [GLIBC2.38]${NC}"
@@ -146,8 +132,7 @@ toolchain() {
 			echo -e "${YELLOW}➜ Proton needs ${GREEN}Ubuntu 20.04.6 LTS [GLIBC2.31]${NC}"
 		fi
 		echo ""
-		echo -e "${GREEN}Proceed to Download the Toolchain?${NC}\n"
-		echo -e "${GREEN}Hint: Type Yes or No in this Field below.${NC}\n"
+		echo -e "${GREEN}Download toolchain? [yes/no]${NC}\n"
 		printf "${USER}:~${SRCTREE}$ "
 		read -r ans
 		ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
@@ -159,8 +144,8 @@ toolchain() {
 		done
 		if [ "$ans" = "YES" ]; then
 			case "$DISTRO" in
-			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.5 LTS")
-				clear
+			"Ubuntu 24.04.1 LTS" | "Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.5 LTS")
+				
 				mkdir -p "$HOME/toolchains/neutron-clang"
 				cd "$HOME/toolchains/neutron-clang" || exit
 				echo -e "${RED}Downloading Neutron-Clang 18 ...${NC}\n"
@@ -174,19 +159,19 @@ toolchain() {
 				glibc_patch
 				cd "$SRCTREE" || exit
 				cp -r "$HOME/toolchains/neutron-clang" toolchain
-				clear
+				
 				select_device
 				;;
 			"Ubuntu 21.10")
 				echo -e "${YELLOW}Downloading Vortex-Clang Toolchain ...${NC}\n"
 				git clone --depth=1 https://github.com/vijaymalav564/vortex-clang toolchain
-				clear
+				
 				select_device
 				;;
 			"Ubuntu 20.04.6 LTS")
 				echo -e "${YELLOW}Downloading Proton-Clang Toolchain ...${NC}\n"
 				git clone --depth=1 https://github.com/kdrag0n/proton-clang toolchain
-				clear
+				
 				select_device
 				;;
 			*)
@@ -194,13 +179,13 @@ toolchain() {
 				;;
 			esac
 		elif [[ "$ans" == "NO" ]]; then
-			clear
+			
 			case "$DISTRO" in
 			"Ubuntu 24.04 LTS" | "Ubuntu 23.10" | "Ubuntu 23.04" | "Ubuntu 22.04.5 LTS" | "Ubuntu 21.10" | "Ubuntu 20.04.6 LTS")
 				echo -e "${YELLOW}Skipping Toolchain download ...${NC}\n"
 				;;
 			*)
-				echo "Unsupported DISTRO: $DISTRO"
+				echo "Unsupported distro: $DISTRO"
 				;;
 			esac
 		else
@@ -214,11 +199,11 @@ select_device() {
 	select devices in "Galaxy A40 (a40)" "Galaxy A30s (a30s)" "Galaxy A30 (a30)" "Galaxy A20e (a20e)" "Galaxy A20 (a20)" "Galaxy A10 (a10)" "Galaxy A8 2018 (jackpotlte)" "Exit"; do
 		case "$devices" in
 		"Galaxy A40 (a40)")
-			clear
-			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
-			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+			
+			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
+			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
 				case "$os" in
-				"Build for ALL OS")
+				"Build for AOSP and OneUI")
 					codename="a40"
 					echo -e "${BLUE}"
 					build_all
@@ -246,7 +231,7 @@ select_device() {
 					break
 					;;
 				"Exit")
-					clear
+					
 					echo -e "${RED}Exiting ...${NC}\n"
 					exit
 					;;
@@ -257,11 +242,11 @@ select_device() {
 			done
 			;;
 		"Galaxy A30s (a30s)")
-			clear
-			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
-			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+			
+			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
+			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
 				case "$os" in
-				"Build for ALL OS")
+				"Build for AOSP and OneUI")
 					codename="a30s"
 					echo -e "${BLUE}"
 					build_all
@@ -289,7 +274,7 @@ select_device() {
 					break
 					;;
 				"Exit")
-					clear
+					
 					echo -e "${RED}Exiting ...${NC}\n"
 					exit
 					;;
@@ -300,11 +285,11 @@ select_device() {
 			done
 			;;
 		"Galaxy A30 (a30)")
-			clear
-			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
-			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+			
+			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
+			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
 				case "$os" in
-				"Build for ALL OS")
+				"Build for AOSP and OneUI")
 					codename="a30"
 					echo -e "${BLUE}"
 					build_all
@@ -332,7 +317,7 @@ select_device() {
 					break
 					;;
 				"Exit")
-					clear
+					
 					echo -e "${RED}Exiting ...${NC}\n"
 					exit
 					;;
@@ -343,11 +328,11 @@ select_device() {
 			done
 			;;
 		"Galaxy A20e (a20e)")
-			clear
-			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
-			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+			
+			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
+			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
 				case "$os" in
-				"Build for ALL OS")
+				"Build for AOSP and OneUI")
 					codename="a20e"
 					echo -e "${BLUE}"
 					build_all
@@ -375,7 +360,7 @@ select_device() {
 					break
 					;;
 				"Exit")
-					clear
+					
 					echo -e "${RED}Exiting ...${NC}\n"
 					exit
 					;;
@@ -386,11 +371,11 @@ select_device() {
 			done
 			;;
 		"Galaxy A20 (a20)")
-			clear
-			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
-			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+			
+			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
+			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
 				case "$os" in
-				"Build for ALL OS")
+				"Build for AOSP and OneUI")
 					codename="a20"
 					echo -e "${BLUE}"
 					build_all
@@ -418,7 +403,7 @@ select_device() {
 					break
 					;;
 				"Exit")
-					clear
+					
 					echo -e "${RED}Exiting ...${NC}\n"
 					exit
 					;;
@@ -429,11 +414,11 @@ select_device() {
 			done
 			;;
 		"Galaxy A10 (a10)")
-			clear
-			echo -e "${GREEN}Please Select your Compilation Type (OS).${NC}\n"
-			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+			
+			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
+			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
 				case "$os" in
-				"Build for ALL OS")
+				"Build for AOSP and OneUI")
 					codename="a10"
 					echo -e "${BLUE}"
 					build_all
@@ -461,7 +446,7 @@ select_device() {
 					break
 					;;
 				"Exit")
-					clear
+					
 					echo -e "${RED}Exiting ...${NC}\n"
 					exit
 					;;
@@ -472,11 +457,11 @@ select_device() {
 			done
 			;;
 		"Galaxy A8 2018 (jackpotlte)")
-			clear
-			echo -e "${RED}Please Select your Compilation Type (OS).${NC}\n"
-			select os in "Build for ALL OS" "Build only for AOSP" "Build only for OneUI" "Exit"; do
+			
+			echo -e "${RED}Please select the OS(es) to compile for.${NC}\n"
+			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
 				case "$os" in
-				"Build for ALL OS")
+				"Build for AOSP and OneUI")
 					codename="jackpotlte"
 					echo -e "${BLUE}"
 					build_all
@@ -504,7 +489,7 @@ select_device() {
 					break
 					;;
 				"Exit")
-					clear
+					
 					echo -e "${RED}Exiting ...${NC}\n"
 					exit
 					;;
@@ -515,7 +500,7 @@ select_device() {
 			done
 			;;
 		"Exit")
-			clear
+			
 			echo -e "${RED}Exiting ...${NC}\n"
 			exit
 			;;
@@ -524,13 +509,6 @@ select_device() {
 			;;
 		esac
 	done
-}
-
-compile_text() {
-	echo -e "${YELLOW}Note that u see only a blinking / freezed Cursor but the script is running.\n"
-	echo -e "Troubleshoot: if u feel that the script takes to long, press CTRL-C and check on Top the RED line for the log file in ${SRCTREE}\n"
-	echo -n -e "Compile Kernel, please wait ... "
-	echo -n -e "\033[?25h"
 }
 
 build_text() {
@@ -577,7 +555,7 @@ make_common() {
 		LD_LIBRARY_PATH="$LD:$LD_LIBRARY_PATH" \
 		CLANG_TRIPLE=$TRIPLE \
 		CROSS_COMPILE="$CROSS" \
-		CROSS_COMPILE_ARM32="$CROSS_ARM32" &>compile$1.log
+		CROSS_COMPILE_ARM32="$CROSS_ARM32" 2>&1 | tee compile$1.log
 	trap "" EXIT
 }
 
@@ -591,35 +569,31 @@ make_out2() {
 
 builder_aosp() {
 	make O=out ARCH=arm64 exynos7885-${codename}_defconfig aosp.config
-	clear
+	
 	echo -e "${RED}Build started for Permissive AOSP Kernel > compile.log ...${NC}\n"
-	compile_text
 	make_out
+
 	set_selinux_enforcing
 	make O=out2 ARCH=arm64 exynos7885-${codename}_defconfig aosp.config
-	clear
-	echo -e "${RED}Build started for Enforcing AOSP Kernel > compile2.log ...${NC}\n"
-	compile_text
+	
+	echo -e "${RED}Build started for Enforcing AOSP Kernel > compile2.log ...${NC}\n"	
 	make_out2
 	echo -e "${NC}"
-	clear
 	echo -e "${YELLOW}Creating ZIP for $codename ...${NC}\n"
 }
 
 builder_oneui() {
 	make O=out ARCH=arm64 exynos7885-${codename}_defconfig
-	clear
+	
 	echo -e "${RED}Build started for Permissive OneUI Kernel > compile.log ...${NC}\n"
-	compile_text
 	make_out
+
 	set_selinux_enforcing
 	make O=out2 ARCH=arm64 exynos7885-${codename}_defconfig
-	clear
+	
 	echo -e "${RED}Build started for Enforcing OneUI Kernel > compile2.log ...${NC}\n"
-	compile_text
 	make_out2
 	echo -e "${NC}"
-	clear
 	echo -e "${YELLOW}Creating ZIP for $codename ...${NC}\n"
 }
 
@@ -749,7 +723,7 @@ aroma() {
 	fi
 	cp "$SRCTREE/kernel_zip/aroma/$AROMA_FILENAME" "$SRCTREE/kernel_zip/"
 	cd "$SRCTREE" || exit
-	clear
+	
 	echo -e "${GREEN}AROMA Installer created: $AROMA_FILENAME and saved in $SRCTREE/kernel_zip/${NC}\n"
 	build_text
 	tg_upload
@@ -766,11 +740,11 @@ pack_aosp() {
 		create_zip_permissive_aosp META-INF tools anykernel.sh Image dtb.img version
 	fi
 	while [ ! -f "$ANYKERNEL/aosp/permissive/Nameless_${codename}_${VER}-debug-permissive-aosp.zip" ] || [ ! -f "$ANYKERNEL/aosp/enforce/Nameless_${codename}_${VER}-debug-enforcing-aosp.zip" ]; do
-		sleep 1
+		sleep 0.1
 	done
 	find "$ANYKERNEL/aosp" -type f -name "*.zip" -exec cp -t "$SRCTREE/kernel_zip" {} +
 	cd "$SRCTREE" || exit
-	clear
+	
 	build_text
 	tg_upload
 }
@@ -786,35 +760,22 @@ pack_oneui() {
 		create_zip_permissive_oneui META-INF tools anykernel.sh Image dtb.img version
 	fi
 	while [ ! -f "$ANYKERNEL/oneui/permissive/Nameless_${codename}_${VER}-debug-permissive-oneui.zip" ] || [ ! -f "$ANYKERNEL/oneui/enforce/Nameless_${codename}_${VER}-debug-enforcing-oneui.zip" ]; do
-		sleep 1
+		sleep 0.1
 	done
 	find "$ANYKERNEL/oneui" -type f -name "*.zip" -exec cp -t "$SRCTREE/kernel_zip" {} +
 	cd "$SRCTREE" || exit
-	clear
+	
 	build_text
 	tg_upload
 }
 
 tg_upload() {
-	echo -e "${GREEN}Upload to Telegram?${NC}\n"
-	echo -e "${GREEN}Hint: Type Yes or No in this Field below.${NC}\n"
-	printf "${USER}:~${SRCTREE}$ "
-	read -r ans
-	ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
-	while [ "$ans" != "YES" ] && [ "$ans" != "NO" ]; do
-		printf "Please answer 'yes' or 'no':'\\n"
-		printf "${USER}:~${SRCTREE}$ "
-		read -r ans
-		ans=$(echo "${ans}" | tr '[:lower:]' '[:upper:]')
-	done
-	if [ "$ans" = "YES" ]; then
+	if [ $UPLOAD_FLAG -eq 1 ]; then
 		echo -e "${GREEN}Uploading $SRCTREE/kernel_zip/$ZIP_FILENAME to Telegram ...${NC}"
 		file_size_mb=$(stat -c "%s" "$SRCTREE/kernel_zip/${ZIP_FILENAME}" | awk '{printf "%.2f", $1 / (1024 * 1024)}')
 		curl -s -X POST "${TELEGRAM_API}/sendMessage" -d "chat_id=${CHAT_ID}" -d "text=Uploading: ${ZIP_FILENAME}%0ASize: ${file_size_mb}MB%0ABuild Date: $(date +'%Y-%m-%d %H:%M:%S')"
-		curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/${ZIP_FILENAME}" "${TELEGRAM_API}/sendDocument"
-		clear
-	elif [ "$ans" = "NO" ]; then
-		clear
+		curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/${ZIP_FILENAME}" "${TELEGRAM_API}/sendDocument"		
+	else
 		echo -e "${RED}Telegram Upload skipped. Exiting ...${NC}\n"
 		echo -e "${GREEN}ZIP Output: $SRCTREE/kernel_zip/${ZIP_FILENAME}${NC}\n"
 		exit
