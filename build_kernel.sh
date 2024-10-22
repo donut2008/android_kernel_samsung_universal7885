@@ -2,6 +2,9 @@
 
 set -e
 
+codename=$(echo $1 | awk '{print tolower($0)}')
+os=$(echo $2 | awk '{print tolower($0)}')
+
 # Export build variables
 export KBUILD_BUILD_USER="localhost"
 export KBUILD_BUILD_HOST="localhost"
@@ -19,7 +22,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Define Kernel Version
-VER="v3.5"
+VER="v4.0-TESTBUILD"
 
 # Compiler
 TOOLCHAIN="$SRCTREE/toolchain/bin"
@@ -46,6 +49,11 @@ UPLOAD_FLAG=0 # 0 if no upload, 1 if yes
 
 # Initialize
 init() {
+	if ! { [ "$codename" = "a40" ] || [ "$codename" = "a30s" ] || [ "$codename" = "a30" ] || [ "$codename" = "a20e" ] || [ "$codename" = "a20" ] || [ "$codename" = "a10" ] || [ "$codename" = "jackpotlte" ]; }; then
+		echo -e "${RED}Invalid device codename! Available codenames are a40, a30s, a20e, a20, a10, and jackpotlte!"
+		echo -e "${RED}Exiting...${NC}\n"
+		exit
+	fi
 	if [ -z "$CHAT_ID" ] || [ -z "$BOT_TOKEN" ]; then
 		echo -e "${YELLOW}Your bot token or chat ID is empty, kernel upload will be skipped.${NC}\n"
 		sleep 0.1
@@ -73,7 +81,7 @@ glibc_patch() {
 	echo -e "${YELLOW}Downloading patchelf binary from NixOS repos...${NC}\n"
 	mkdir -p "${HOME}"/.neutron-tc/patchelf-temp
 	if [ -f "patchelf-0.18.0-x86_64.tar.gz" ]; then
-		echo -e "${YELLOW}File exists ... Skip!${NC}\n"
+		echo -e "${YELLOW}File exists. Skipping download.${NC}\n"
 	else
 		wget -qO- https://github.com/NixOS/patchelf/releases/download/0.18.0/patchelf-0.18.0-x86_64.tar.gz | bsdtar -C "${HOME}"/.neutron-tc/patchelf-temp -xf -
 	fi
@@ -107,11 +115,9 @@ glibc_patch() {
 toolchain() {
 	
 	if [ -d "$TOOLCHAIN" ]; then
-		
-		echo -e "${GREEN}Toolchain found. Skip!${NC}\n"
+		echo -e "${GREEN}Toolchain found. Skipping download.${NC}\n"
 		sleep 0.1
-		
-		select_device
+		select_device "$codename" "$os"
 	else
 		echo -e "${RED}No Toolchain found!${NC}\n"
 		echo -e "${YELLOW}Warning: Toolchains need different Operating Systems!${NC}\n"
@@ -160,19 +166,19 @@ toolchain() {
 				cd "$SRCTREE" || exit
 				cp -r "$HOME/toolchains/neutron-clang" toolchain
 				
-				select_device
+				select_device "$codename" "$os"
 				;;
 			"Ubuntu 21.10")
 				echo -e "${YELLOW}Downloading Vortex-Clang Toolchain ...${NC}\n"
 				git clone --depth=1 https://github.com/vijaymalav564/vortex-clang toolchain
 				
-				select_device
+				select_device "$codename" "$os"
 				;;
 			"Ubuntu 20.04.6 LTS")
 				echo -e "${YELLOW}Downloading Proton-Clang Toolchain ...${NC}\n"
 				git clone --depth=1 https://github.com/kdrag0n/proton-clang toolchain
 				
-				select_device
+				select_device "$codename" "$os"
 				;;
 			*)
 				echo "Unsupported DISTRO: $DISTRO"
@@ -195,320 +201,30 @@ toolchain() {
 }
 
 select_device() {
-	echo -e "${GREEN}Please select your Device${NC}\n"
-	select devices in "Galaxy A40 (a40)" "Galaxy A30s (a30s)" "Galaxy A30 (a30)" "Galaxy A20e (a20e)" "Galaxy A20 (a20)" "Galaxy A10 (a10)" "Galaxy A8 2018 (jackpotlte)" "Exit"; do
-		case "$devices" in
-		"Galaxy A40 (a40)")
-			
-			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
-			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
-				case "$os" in
-				"Build for AOSP and OneUI")
-					codename="a40"
-					echo -e "${BLUE}"
-					build_all
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for AOSP")
-					codename="a40"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_aosp
-					copy_aosp
-					pack_aosp
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for OneUI")
-					codename="a40"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_oneui
-					copy_oneui
-					pack_oneui
-					echo -e "${NC}"
-					break
-					;;
-				"Exit")
-					
-					echo -e "${RED}Exiting ...${NC}\n"
-					exit
-					;;
-				*)
-					echo -e "${RED}Invalid option. Please select again.${NC}\n"
-					;;
-				esac
-			done
-			;;
-		"Galaxy A30s (a30s)")
-			
-			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
-			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
-				case "$os" in
-				"Build for AOSP and OneUI")
-					codename="a30s"
-					echo -e "${BLUE}"
-					build_all
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for AOSP")
-					codename="a30s"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_aosp
-					copy_aosp
-					pack_aosp
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for OneUI")
-					codename="a30s"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_oneui
-					copy_oneui
-					pack_oneui
-					echo -e "${NC}"
-					break
-					;;
-				"Exit")
-					
-					echo -e "${RED}Exiting ...${NC}\n"
-					exit
-					;;
-				*)
-					echo -e "${RED}Invalid option. Please select again.${NC}\n"
-					;;
-				esac
-			done
-			;;
-		"Galaxy A30 (a30)")
-			
-			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
-			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
-				case "$os" in
-				"Build for AOSP and OneUI")
-					codename="a30"
-					echo -e "${BLUE}"
-					build_all
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for AOSP")
-					codename="a30"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_aosp
-					copy_aosp
-					pack_aosp
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for OneUI")
-					codename="a30"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_oneui
-					copy_oneui
-					pack_oneui
-					echo -e "${NC}"
-					break
-					;;
-				"Exit")
-					
-					echo -e "${RED}Exiting ...${NC}\n"
-					exit
-					;;
-				*)
-					echo -e "${RED}Invalid option. Please select again.${NC}\n"
-					;;
-				esac
-			done
-			;;
-		"Galaxy A20e (a20e)")
-			
-			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
-			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
-				case "$os" in
-				"Build for AOSP and OneUI")
-					codename="a20e"
-					echo -e "${BLUE}"
-					build_all
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for AOSP")
-					codename="a20e"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_aosp
-					copy_aosp
-					pack_aosp
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for OneUI")
-					codename="a20e"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_oneui
-					copy_oneui
-					pack_oneui
-					echo -e "${NC}"
-					break
-					;;
-				"Exit")
-					
-					echo -e "${RED}Exiting ...${NC}\n"
-					exit
-					;;
-				*)
-					echo -e "${RED}Invalid option. Please select again.${NC}\n"
-					;;
-				esac
-			done
-			;;
-		"Galaxy A20 (a20)")
-			
-			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
-			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
-				case "$os" in
-				"Build for AOSP and OneUI")
-					codename="a20"
-					echo -e "${BLUE}"
-					build_all
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for AOSP")
-					codename="a20"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_aosp
-					copy_aosp
-					pack_aosp
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for OneUI")
-					codename="a20"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_oneui
-					copy_oneui
-					pack_oneui
-					echo -e "${NC}"
-					break
-					;;
-				"Exit")
-					
-					echo -e "${RED}Exiting ...${NC}\n"
-					exit
-					;;
-				*)
-					echo -e "${RED}Invalid option. Please select again.${NC}\n"
-					;;
-				esac
-			done
-			;;
-		"Galaxy A10 (a10)")
-			
-			echo -e "${GREEN}Please select the OS(es) to compile for.${NC}\n"
-			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
-				case "$os" in
-				"Build for AOSP and OneUI")
-					codename="a10"
-					echo -e "${BLUE}"
-					build_all
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for AOSP")
-					codename="a10"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_aosp
-					copy_aosp
-					pack_aosp
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for OneUI")
-					codename="a10"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_oneui
-					copy_oneui
-					pack_oneui
-					echo -e "${NC}"
-					break
-					;;
-				"Exit")
-					
-					echo -e "${RED}Exiting ...${NC}\n"
-					exit
-					;;
-				*)
-					echo -e "${RED}Invalid option. Please select again.${NC}\n"
-					;;
-				esac
-			done
-			;;
-		"Galaxy A8 2018 (jackpotlte)")
-			
-			echo -e "${RED}Please select the OS(es) to compile for.${NC}\n"
-			select os in "Build for AOSP and OneUI" "Build only for AOSP" "Build only for OneUI" "Exit"; do
-				case "$os" in
-				"Build for AOSP and OneUI")
-					codename="jackpotlte"
-					echo -e "${BLUE}"
-					build_all
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for AOSP")
-					codename="jackpotlte"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_aosp
-					copy_aosp
-					pack_aosp
-					echo -e "${NC}"
-					break
-					;;
-				"Build only for OneUI")
-					codename="jackpotlte"
-					echo -e "${BLUE}"
-					set_selinux_permissive
-					builder_oneui
-					copy_oneui
-					pack_oneui
-					echo -e "${NC}"
-					break
-					;;
-				"Exit")
-					
-					echo -e "${RED}Exiting ...${NC}\n"
-					exit
-					;;
-				*)
-					echo -e "${RED}Invalid option. Please select again.${NC}\n"
-					;;
-				esac
-			done
-			;;
-		"Exit")
-			
+	if [ "$1" = "a40" ] || [ "$1" = "a30s" ] || [ "$1" = "a30" ] || [ "$1" = "a20e" ] || [ "$1" = "a20" ] || [ "$1" = "a10" ] || [ "$1" = "jackpotlte" ]; then
+		if [ "$2" = "all" ]; then
+			echo -e "${BLUE}"
+			build_all
+			echo -e "${NC}"
+		elif [ "$2" = "aosp" ]; then
+			echo -e "${BLUE}"
+			set_selinux_permissive
+			builder_aosp
+			copy_aosp
+			pack_aosp
+			echo -e "${NC}"
+		elif [ "$2" = "oneui" ]; then
+			echo -e "${BLUE}"
+			set_selinux_permissive
+			builder_oneui
+			copy_oneui
+			pack_oneui
+			echo -e "${NC}"
+		else
 			echo -e "${RED}Exiting ...${NC}\n"
 			exit
-			;;
-		*)
-			echo -e "${RED}Invalid option. Please select again.${NC}\n"
-			;;
-		esac
-	done
+		fi
+	fi
 }
 
 build_text() {
@@ -544,7 +260,7 @@ set_selinux_enforcing() {
 }
 
 make_common() {
-	trap "echo -e \"${RED}Build Error!${NC}\n\"" EXIT
+	trap "echo -e \"${RED}Build error!${NC}\n\"" EXIT
 	PATH=$TOOLCHAIN:$PATH \
 		make O=out$1 -j$(nproc --all) \
 		ARCH=arm64 \
@@ -570,13 +286,15 @@ make_out2() {
 builder_aosp() {
 	make O=out ARCH=arm64 exynos7885-${codename}_defconfig aosp.config
 	
-	echo -e "${RED}Build started for Permissive AOSP Kernel > compile.log ...${NC}\n"
+	echo -e "${GREEN}Build started for permissive AOSP kernel..."
+	echo -e "${BLUE}Log location: ${SRCTREE}/compile.log${NC}\n"
 	make_out
 
 	set_selinux_enforcing
 	make O=out2 ARCH=arm64 exynos7885-${codename}_defconfig aosp.config
 	
-	echo -e "${RED}Build started for Enforcing AOSP Kernel > compile2.log ...${NC}\n"	
+	echo -e "${GREEN}Build started for enforcing AOSP kernel..."
+	echo -e "${BLUE}Log location: ${SRCTREE}/compile2.log${NC}\n"
 	make_out2
 	echo -e "${NC}"
 	echo -e "${YELLOW}Creating ZIP for $codename ...${NC}\n"
@@ -585,13 +303,15 @@ builder_aosp() {
 builder_oneui() {
 	make O=out ARCH=arm64 exynos7885-${codename}_defconfig
 	
-	echo -e "${RED}Build started for Permissive OneUI Kernel > compile.log ...${NC}\n"
+	echo -e "${GREEN}Build started for permissive OneUI kernel..."
+	echo -e "${BLUE}Log location: ${SRCTREE}/compile.log${NC}\n"
 	make_out
 
 	set_selinux_enforcing
 	make O=out2 ARCH=arm64 exynos7885-${codename}_defconfig
 	
-	echo -e "${RED}Build started for Enforcing OneUI Kernel > compile2.log ...${NC}\n"
+	echo -e "${GREEN}Build started for enforcing OneUI kernel..."
+	echo -e "${BLUE}Log location: ${SRCTREE}/compile2.log${NC}\n"
 	make_out2
 	echo -e "${NC}"
 	echo -e "${YELLOW}Creating ZIP for $codename ...${NC}\n"
@@ -600,16 +320,11 @@ builder_oneui() {
 copy_oneui() {
 	cp out/arch/arm64/boot/Image "$ANYKERNEL/oneui/permissive/"
 	cp out2/arch/arm64/boot/Image "$ANYKERNEL/oneui/enforce/"
-	if [[ "$codename" = "a40" || "$codename" == "a30s" ]]; then
+	if [ "$codename" = "a40" ] || [ "$codename" = "a30s" ] || [ "$codename" = "a30" ] || [ "$codename" = "a20e" ] || [ "$codename" = "a20" ] || [ "$codename" = "a10" ]; then
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/oneui/enforce/"
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/oneui/permissive/"
 		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/oneui/enforce/dtb.img"
 		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/oneui/permissive/dtb.img"
-	elif [[ "$codename" = "a30" || "$codename" = "a20e" || "$codename" = "a20" || "$codename" = "a10" ]]; then
-		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/oneui/enforce/"
-		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/oneui/permissive/"
-		cp $ANYKERNEL/prebuilt/${codename}/dtb_enf.img "$ANYKERNEL/oneui/enforce/dtb.img"
-		cp $ANYKERNEL/prebuilt/${codename}/dtb_perm.img "$ANYKERNEL/oneui/permissive/dtb.img"
 	elif [ "$codename" = "jackpotlte" ]; then
 		cp out2/arch/arm64/boot/dtb.img "$ANYKERNEL/oneui/enforce/"
 		cp out/arch/arm64/boot/dtb.img "$ANYKERNEL/oneui/permissive/"
@@ -619,16 +334,11 @@ copy_oneui() {
 copy_aosp() {
 	cp out/arch/arm64/boot/Image "$ANYKERNEL/aosp/permissive/"
 	cp out2/arch/arm64/boot/Image "$ANYKERNEL/aosp/enforce/"
-	if [[ "$codename" = "a40" || "$codename" == "a30s" ]]; then
+	if [ "$codename" = "a40" ] || [ "$codename" = "a30s" ] || [ "$codename" = "a30" ] || [ "$codename" = "a20e" ] || [ "$codename" = "a20" ] || [ "$codename" = "a10" ]; then
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/aosp/enforce/"
 		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/aosp/permissive/"
 		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/aosp/enforce/dtb.img"
 		cp $ANYKERNEL/prebuilt/${codename}/dtb.img "$ANYKERNEL/aosp/permissive/dtb.img"
-	elif [[ "$codename" = "a30" || "$codename" = "a20e" || "$codename" = "a20" || "$codename" = "a10" ]]; then
-		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/aosp/enforce/"
-		cp $ANYKERNEL/prebuilt/${codename}/dtbo.img "$ANYKERNEL/aosp/permissive/"
-		cp $ANYKERNEL/prebuilt/${codename}/dtb_enf.img "$ANYKERNEL/aosp/enforce/dtb.img"
-		cp $ANYKERNEL/prebuilt/${codename}/dtb_perm.img "$ANYKERNEL/aosp/permissive/dtb.img"
 	elif [ "$codename" = "jackpotlte" ]; then
 		cp out2/arch/arm64/boot/dtb.img "$ANYKERNEL/aosp/enforce/"
 		cp out/arch/arm64/boot/dtb.img "$ANYKERNEL/aosp/permissive/"
@@ -670,8 +380,8 @@ create_zip_permissive_aosp() {
 	makefile_info
 	cd "$ANYKERNEL/aosp/permissive" || exit
 	build_info
-	ZIP_FILENAME="Nameless_${codename}_${VER}-debug-permissive-aosp.zip"
-	zip -r9 "$ZIP_FILENAME" "$@"
+	PERMISSIVE_ZIP_FILENAME="Nameless_${codename}_${VER}-debug-permissive-aosp.zip"
+	zip -r9 "$PERMISSIVE_ZIP_FILENAME" "$@"
 }
 
 create_zip_enforcing_aosp() {
@@ -679,8 +389,8 @@ create_zip_enforcing_aosp() {
 	makefile_info
 	cd "$ANYKERNEL/aosp/enforce" || exit
 	build_info
-	ZIP_FILENAME="Nameless_${codename}_${VER}-debug-enforcing-aosp.zip"
-	zip -r9 "$ZIP_FILENAME" "$@"
+	ENFORCING_ZIP_FILENAME="Nameless_${codename}_${VER}-debug-enforcing-aosp.zip"
+	zip -r9 "$ENFORCING_ZIP_FILENAME" "$@"
 }
 
 create_zip_permissive_oneui() {
@@ -688,8 +398,8 @@ create_zip_permissive_oneui() {
 	makefile_info
 	cd "$ANYKERNEL/oneui/permissive" || exit
 	build_info
-	ZIP_FILENAME="Nameless_${codename}_${VER}-debug-permissive-oneui.zip"
-	zip -r9 "$ZIP_FILENAME" "$@"
+	PERMISSIVE_ZIP_FILENAME="Nameless_${codename}_${VER}-debug-permissive-oneui.zip"
+	zip -r9 "$PERMISSIVE_ZIP_FILENAME" "$@"
 }
 
 create_zip_enforcing_oneui() {
@@ -697,8 +407,8 @@ create_zip_enforcing_oneui() {
 	makefile_info
 	cd "$ANYKERNEL/oneui/enforce" || exit
 	build_info
-	ZIP_FILENAME="Nameless_${codename}_${VER}-debug-enforcing-oneui.zip"
-	zip -r9 "$ZIP_FILENAME" "$@"
+	ENFORCING_ZIP_FILENAME="Nameless_${codename}_${VER}-debug-enforcing-oneui.zip"
+	zip -r9 "$ENFORCING_ZIP_FILENAME" "$@"
 }
 
 create_aroma() {
@@ -771,10 +481,10 @@ pack_oneui() {
 
 tg_upload() {
 	if [ $UPLOAD_FLAG -eq 1 ]; then
-		echo -e "${GREEN}Uploading $SRCTREE/kernel_zip/$ZIP_FILENAME to Telegram ...${NC}"
+		echo -e "${GREEN}Uploading $SRCTREE/kernel_zip/$PERMISSIVE_ZIP_FILENAME and $SRCTREE/kernel_zip/$ENFORCING_ZIP_FILENAME to Telegram ...${NC}"
 		file_size_mb=$(stat -c "%s" "$SRCTREE/kernel_zip/${ZIP_FILENAME}" | awk '{printf "%.2f", $1 / (1024 * 1024)}')
-		curl -s -X POST "${TELEGRAM_API}/sendMessage" -d "chat_id=${CHAT_ID}" -d "text=Uploading: ${ZIP_FILENAME}%0ASize: ${file_size_mb}MB%0ABuild Date: $(date +'%Y-%m-%d %H:%M:%S')"
-		curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/${ZIP_FILENAME}" "${TELEGRAM_API}/sendDocument"		
+		curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/${ENFORCING_ZIP_FILENAME}" "${TELEGRAM_API}/sendDocument"
+		curl -s -F chat_id="${CHAT_ID}" -F document=@"$SRCTREE/kernel_zip/${PERMISSIVE_ZIP_FILENAME}" "${TELEGRAM_API}/sendDocument"
 	else
 		echo -e "${RED}Telegram Upload skipped. Exiting ...${NC}\n"
 		echo -e "${GREEN}ZIP Output: $SRCTREE/kernel_zip/${ZIP_FILENAME}${NC}\n"

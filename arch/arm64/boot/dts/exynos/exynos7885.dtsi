@@ -316,8 +316,7 @@
 					const-type = <CONSTRAINT_MIN>;
 					dm-type = <DM_MIF>;
           					/*  cpu     mif  */
-					table = < 2184000 1794000
-          					2080000 1794000
+					table = < 2080000 1794000
           					1976000 1539000
           					1872000 1539000
           					1768000 1352000
@@ -3059,7 +3058,7 @@
 				ctrl-type = <PM_QOS_MIN_LIMIT>;
 				execution-mode = <AARCH64_MODE>;
 					/* big	    lit */
-				table = < 2184000 1586000
+				table = < 208000 1586000
 					  2080000  839000
 					  1976000  839000
 					  1872000  839000
@@ -3076,8 +3075,7 @@
 				ctrl-type = <PM_QOS_MAX_LIMIT>;
 				execution-mode = <AARCH64_MODE>;
 					/* big	    lit */
-				table = < 2184000 1586000
-					  2080000 1586000
+				table = < 2080000 1586000
 					  1976000 1586000
 					  1872000 1586000
 					  1768000 1586000
