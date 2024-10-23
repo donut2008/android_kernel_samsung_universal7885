@@ -366,10 +366,10 @@ static int gpu_dvfs_update_config_data_from_dt(struct kbase_device *kbdev)
 	gpu_update_config_data_int(np, "gpu_dss_id_type", &platform->gpu_dss_freq_id);
 
 	/* Hardcode GPU min/max values instead reading from DTB/DTBO */
-	platform->gpu_max_clock_limit = 1100000;
-	platform->gpu_max_clock = 1100000;
-	platform->gpu_dvfs_start_clock = 450000;
-	platform->gpu_min_clock = 450000;
+	platform->gpu_max_clock_limit = 1300000;
+	platform->gpu_max_clock = 1300000;
+	platform->gpu_dvfs_start_clock = 343000;
+	platform->gpu_min_clock = 343000;
 
 	return 0;
 }

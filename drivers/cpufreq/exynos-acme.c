@@ -1220,14 +1220,14 @@ static __init int init_domain(struct exynos_cpufreq_domain *domain,
 		if (domain->id == 0) {
 			domain->max_freq = 1690000;
 		} else if (domain->id == 1) {
-			domain->max_freq = 2184000;
+			domain->max_freq = 2080000;
 		}
 
 	if (!of_property_read_u32(dn, "min-freq", &val))
 		if (domain->id == 0) {
-			domain->min_freq = 546000;
+			domain->min_freq = 208000;
 		} else if (domain->id == 1) {
-			domain->min_freq = 520000;
+			domain->min_freq = 208000;
 		}
 
 
@@ -1238,7 +1238,7 @@ static __init int init_domain(struct exynos_cpufreq_domain *domain,
 		domain->boot_freq = 1690000;
 		domain->resume_freq = 1014000;
 	} else if (domain->id == 1) {
-		domain->boot_freq = 2184000;
+		domain->boot_freq = 2080000;
 		domain->resume_freq = 1586000;
 	}
 
