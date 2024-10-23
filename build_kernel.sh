@@ -22,7 +22,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Define Kernel Version
-VER="v4.0-TESTBUILD"
+VER="v4.1"
 
 # Compiler
 TOOLCHAIN="$SRCTREE/toolchain/bin"
@@ -49,8 +49,8 @@ UPLOAD_FLAG=0 # 0 if no upload, 1 if yes
 
 # Initialize
 init() {
-	if ! { [ "$codename" = "a40" ] || [ "$codename" = "a30s" ] || [ "$codename" = "a30" ] || [ "$codename" = "a20e" ] || [ "$codename" = "a20" ] || [ "$codename" = "a10" ] || [ "$codename" = "jackpotlte" ]; }; then
-		echo -e "${RED}Invalid device codename! Available codenames are a40, a30s, a20e, a20, a10, and jackpotlte!"
+	if ! { [ "$codename" = "a40" ] || [ "$codename" = "a30s" ] || [ "$codename" = "a30" ] || [ "$codename" = "jackpotlte" ]; }; then
+		echo -e "${RED}Invalid device codename! Available codenames are a40, a30s, a30, and jackpotlte!"
 		echo -e "${RED}Exiting...${NC}\n"
 		exit
 	fi
@@ -201,7 +201,7 @@ toolchain() {
 }
 
 select_device() {
-	if [ "$1" = "a40" ] || [ "$1" = "a30s" ] || [ "$1" = "a30" ] || [ "$1" = "a20e" ] || [ "$1" = "a20" ] || [ "$1" = "a10" ] || [ "$1" = "jackpotlte" ]; then
+	if [ "$1" = "a40" ] || [ "$1" = "a30s" ] || [ "$1" = "a30" ] || [ "$1" = "jackpotlte" ]; then
 		if [ "$2" = "all" ]; then
 			echo -e "${BLUE}"
 			build_all
