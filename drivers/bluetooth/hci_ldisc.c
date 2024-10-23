@@ -113,16 +113,21 @@ static inline struct sk_buff *hci_uart_dequeue(struct hci_uart *hu)
 {
 	struct sk_buff *skb = hu->tx_skb;
 
-	if (!skb)
-		skb = hu->proto->dequeue(hu);
-	else
+	if (!skb) {
+		if (test_bit(HCI_UART_PROTO_READY, &hu->flags))
+			skb = hu->proto->dequeue(hu);
+	} else {
 		hu->tx_skb = NULL;
+	}
 
 	return skb;
 }
 
 int hci_uart_tx_wakeup(struct hci_uart *hu)
 {
+	if (!test_bit(HCI_UART_PROTO_READY, &hu->flags))
+		return 0;
+
 	if (test_and_set_bit(HCI_UART_SENDING, &hu->tx_state)) {
 		set_bit(HCI_UART_TX_WAKEUP, &hu->tx_state);
 		return 0;
@@ -162,7 +167,7 @@ restart:
 			break;
 		}
 
-		hci_uart_tx_complete(hu, bt_cb(skb)->pkt_type);
+		hci_uart_tx_complete(hu, hci_skb_pkt_type(skb));
 		kfree_skb(skb);
 	}
 
@@ -248,7 +253,8 @@ static int hci_uart_send_frame(struct hci_dev *hdev, struct sk_buff *skb)
 {
 	struct hci_uart *hu = hci_get_drvdata(hdev);
 
-	BT_DBG("%s: type %d len %d", hdev->name, bt_cb(skb)->pkt_type, skb->len);
+	BT_DBG("%s: type %d len %d", hdev->name, hci_skb_pkt_type(skb),
+	       skb->len);
 
 	hu->proto->enqueue(hu, skb);
 
@@ -470,13 +476,7 @@ static int hci_uart_tty_open(struct tty_struct *tty)
 	INIT_WORK(&hu->init_ready, hci_uart_init_work);
 	INIT_WORK(&hu->write_work, hci_uart_write_work);
 
-	/* Flush any pending characters in the driver and line discipline. */
-
-	/* FIXME: why is this needed. Note don't use ldisc_ref here as the
-	   open path is before the ldisc is referencable */
-
-	if (tty->ldisc->ops->flush_buffer)
-		tty->ldisc->ops->flush_buffer(tty);
+	/* Flush any pending characters in the driver */
 	tty_driver_flush_buffer(tty);
 
 	return 0;
@@ -623,7 +623,7 @@ static int hci_uart_register_dev(struct hci_uart *hu)
 	if (test_bit(HCI_UART_CREATE_AMP, &hu->hdev_flags))
 		hdev->dev_type = HCI_AMP;
 	else
-		hdev->dev_type = HCI_BREDR;
+		hdev->dev_type = HCI_PRIMARY;
 
 	if (test_bit(HCI_UART_INIT_PENDING, &hu->hdev_flags))
 		return 0;
@@ -710,34 +710,36 @@ static int hci_uart_tty_ioctl(struct tty_struct *tty, struct file *file,
 	case HCIUARTSETPROTO:
 		if (!test_and_set_bit(HCI_UART_PROTO_SET, &hu->flags)) {
 			err = hci_uart_set_proto(hu, arg);
-			if (err) {
+			if (err)
 				clear_bit(HCI_UART_PROTO_SET, &hu->flags);
-				return err;
-			}
 		} else
-			return -EBUSY;
+			err = -EBUSY;
 		break;
 
 	case HCIUARTGETPROTO:
 		if (test_bit(HCI_UART_PROTO_SET, &hu->flags))
-			return hu->proto->id;
-		return -EUNATCH;
+			err = hu->proto->id;
+		else
+			err = -EUNATCH;
+		break;
 
 	case HCIUARTGETDEVICE:
 		if (test_bit(HCI_UART_REGISTERED, &hu->flags))
-			return hu->hdev->id;
-		return -EUNATCH;
+			err = hu->hdev->id;
+		else
+			err = -EUNATCH;
+		break;
 
 	case HCIUARTSETFLAGS:
 		if (test_bit(HCI_UART_PROTO_SET, &hu->flags))
-			return -EBUSY;
-		err = hci_uart_set_flags(hu, arg);
-		if (err)
-			return err;
+			err = -EBUSY;
+		else
+			err = hci_uart_set_flags(hu, arg);
 		break;
 
 	case HCIUARTGETFLAGS:
-		return hu->hdev_flags;
+		err = hu->hdev_flags;
+		break;
 
 	default:
 		err = n_tty_ioctl_helper(tty, file, cmd, arg);
@@ -820,6 +822,12 @@ static int __init hci_uart_init(void)
 #ifdef CONFIG_BT_HCIUART_QCA
 	qca_init();
 #endif
+#ifdef CONFIG_BT_HCIUART_AG6XX
+	ag6xx_init();
+#endif
+#ifdef CONFIG_BT_HCIUART_MRVL
+	mrvl_init();
+#endif
 
 	return 0;
 }
@@ -851,6 +859,12 @@ static void __exit hci_uart_exit(void)
 #endif
 #ifdef CONFIG_BT_HCIUART_QCA
 	qca_deinit();
+#endif
+#ifdef CONFIG_BT_HCIUART_AG6XX
+	ag6xx_deinit();
+#endif
+#ifdef CONFIG_BT_HCIUART_MRVL
+	mrvl_deinit();
 #endif
 
 	/* Release tty registration of line discipline */
